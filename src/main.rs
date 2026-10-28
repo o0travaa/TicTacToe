@@ -1,89 +1,122 @@
 use std::io;
 
-fn main() {
-    println!("Hello, world!");
-    let mut matrix = vec![vec![0,0,0],vec![0,0,0],vec![0,0,0]];
-    let mut player = 1;
-    let mut count = 0;
-    let mut playfield = vec![vec![' ',' ',' '],vec![' ',' ',' '] ,vec![' ',' ',' ']];
-    println!("{:?}", matrix);
+enum Player {
+    X,
+    O,
+}
 
-    //game starts
-    'game: loop{
-        //check which players turn
-        if player == 1{
-            println!("Spieler X ist dran");
+fn main() {
+    let mut playfield = [[' ', ' ', ' '], [' ', ' ', ' '], [' ', ' ', ' ']];
+    let mut player = Player::X;
+    let mut move_count = 0;
+
+    'game: loop {
+        match player {
+            Player::X => println!("Spieler X ist dran"),
+            Player::O => println!("Spieler O ist dran"),
         }
-        else { println!("Spieler O ist dran") }
-        //enter coordinates for position 
+
         let mut coordinatex = String::new();
         let mut coordinatey = String::new();
+
         println!("Enter your move:");
         println!("Enter x (0-2):");
         io::stdin()
             .read_line(&mut coordinatex)
             .expect("Fehler");
-        let coordinatex = coordinatex.trim().parse::<i32>().unwrap();
+
+        // Parse as usize so the value can index the board without casts.
+        let coordinatex: usize = match coordinatex.trim().parse() {
+            Ok(num) => num,
+            Err(_) => {
+                println!("Bitte eine Zahl eingeben (0-2)!");
+                continue 'game;
+            }
+        };
+
         println!("Enter y (0-2):");
         io::stdin()
             .read_line(&mut coordinatey)
             .expect("Fehler");
-        let coordinatey = coordinatey.trim().parse::<i32>().unwrap();
 
-        //check for errors
-        if coordinatex <0 || coordinatex >2 || coordinatey<0||coordinatey>2{
+        let coordinatey: usize = match coordinatey.trim().parse() {
+            Ok(num) => num,
+            Err(_) => {
+                println!("Bitte eine Zahl eingeben (0-2)!");
+                continue 'game;
+            }
+        };
+
+        if coordinatex > 2 || coordinatey > 2 {
             println!("Fehler");
             continue 'game;
         }
-        if matrix[coordinatey as usize][coordinatex as usize] != 0{
+
+        if playfield[coordinatey][coordinatex] != ' ' {
             println!("Besetzt");
             continue 'game;
         }
 
-        //fill in symbol and show game field
-        matrix[coordinatey as usize][coordinatex as usize] = player;
-        if player == 1{
-            playfield[coordinatey as usize][coordinatex as usize] = 'X';
-        }
-        else { playfield[coordinatey as usize][coordinatex as usize] = 'O'; }
-        for x in 0..3{
-            for y in 0..3 {
-                if y != 2{print!("  {}  |", playfield[x][y]);}
-                else{print!("  {}  ", playfield[x][y]);}
-            }
-            println!("");
-            if x != 2{
-            println!("-----------------");}
-        }
-        
-        //check if someone won
-        let test3 = matrix[0][0]+matrix[1][1]+matrix[2][2];
-        let test4 = matrix[0][2]+matrix[1][1]+matrix[2][0];
-        for i in 0..3{
-            let test = matrix[i][0] + matrix[i][1] + matrix[i][2];
-            let test2 = matrix[0][i] + matrix[1][i] + matrix[2][i];
-            let tests  = vec![test, test2, test3, test4];
-            for i in tests{
-                if i == 3{
-                    println!("Spieler X hat gewonnen");
-                    break 'game;
-                }
-                if i == -3{
-                    println!("Spieler O hat gewonnen");
-                    break 'game;
+        playfield[coordinatey][coordinatex] = match player {
+            Player::X => 'X',
+            Player::O => 'O',
+        };
+
+        for row in 0..3 {
+            for col in 0..3 {
+                if col != 2 {
+                    print!("  {}  |", playfield[row][col]);
+                } else {
+                    print!("  {}  ", playfield[row][col]);
                 }
             }
 
+            println!();
+
+            if row != 2 {
+                println!("-----------------");
+            }
         }
 
+        let mark = match player {
+            Player::X => 'X',
+            Player::O => 'O',
+        };
 
-        player = player*(-1);
-        count +=1;
-        if count == matrix.len()*matrix[0].len(){
+        // A win is three matching marks in a row, column, or diagonal.
+        let row_win = (0..3).any(|row| {
+            playfield[row][0] == mark
+                && playfield[row][1] == mark
+                && playfield[row][2] == mark
+        });
+        let col_win = (0..3).any(|col| {
+            playfield[0][col] == mark
+                && playfield[1][col] == mark
+                && playfield[2][col] == mark
+        });
+        let main_diag_win =
+            playfield[0][0] == mark && playfield[1][1] == mark && playfield[2][2] == mark;
+        let anti_diag_win =
+            playfield[0][2] == mark && playfield[1][1] == mark && playfield[2][0] == mark;
+
+        if row_win || col_win || main_diag_win || anti_diag_win {
+            match player {
+                Player::X => println!("Spieler X hat gewonnen"),
+                Player::O => println!("Spieler O hat gewonnen"),
+            }
+            break 'game;
+        }
+
+        // Draw is only possible after confirming that nobody won this turn.
+        move_count += 1;
+        if move_count == 9 {
             println!("Unentschieden");
-            break 'game
+            break 'game;
         }
 
+        player = match player {
+            Player::X => Player::O,
+            Player::O => Player::X,
+        };
     }
-
 }
